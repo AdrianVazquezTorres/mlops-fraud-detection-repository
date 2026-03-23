@@ -1,0 +1,13 @@
+# Datos
+data/
+*.csv
+*.parquet
+
+# Modelos locales
+*.pkl
+*.model
+
+# Entornos y Python
+.venv/
+__pycache__/
+.pytest_cache/
