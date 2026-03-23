@@ -16,7 +16,7 @@ app = FastAPI(
 
 # Construcción de ruta relativa segura (funciona en Windows, Mac, Linux, Docker)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-MODEL_PATH = BASE_DIR / "model" / "nombre_modelo.jolib"  # FIXME
+MODEL_PATH = BASE_DIR / "model" / "model_aml_xgboost.jolib"  # FIXME
 
 # Variable global del modelo
 model = None
@@ -34,5 +34,29 @@ def load_model():
         print(f"❌ Error al cargar el modelo: {e}")
 
 
-# @app.post("/predict/")
-# def predict_fraud(transaction: BankTransaction):
+@app.post("/predict/")
+def predict_fraud(transaction: BankTransaction):
+    try:
+        # Regla de negocio: Sólo TRANSFER y CASH_OUT pueden ser fraude
+        if transaction.type not in ["TRANSFER", "CASH_OUT"]:
+            return {
+                "status": "SUCCESS",
+                "decision": "NOT FRAUD",
+                "probability": 0.0,
+                "note": "Tipo de transacción inherentemente segura según reglas de negocio"
+            }
+
+        # Inferencia
+        df_input = pd.DataFrame([transaction.model_dump()])
+        probability = round(float(model.predict_proba(df_input)[:, 1][0]), 6)
+        prediction = int(probability > 0.5)
+
+        return {
+            "status": "SUCCESS",
+            "decision": "FRAUD" if prediction == 1 else "NOT FRAUD",
+            "probability": probability,
+            "prediction": prediction
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en predicción: {str(e)}")
