@@ -34,6 +34,18 @@ def load_model():
         print(f"❌ Error al cargar el modelo: {e}")
 
 
+@app.get("/")
+def health_check():
+    """
+    Endpoint de estado para comprobar que la API está funcionando.
+    """
+    return {
+        "status": "online",
+        "message": "Bienvenido a la API de Detección de fraude (MLOps)",
+        "model_loaded": model is not None
+    }
+
+
 @app.post("/predict/")
 def predict_fraud(transaction: BankTransaction):
     try:
