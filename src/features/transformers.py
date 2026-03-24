@@ -11,6 +11,9 @@ class MathTransformations(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.column_names = None
 
+    def fit(self, X, y=None):
+        return self
+
     def transform(self, X):
         X_copy = X.copy()
 
