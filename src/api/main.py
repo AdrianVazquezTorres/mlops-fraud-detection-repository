@@ -16,7 +16,7 @@ app = FastAPI(
 
 # Construcción de ruta relativa segura (funciona en Windows, Mac, Linux, Docker)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-MODEL_PATH = BASE_DIR / "model" / "model_aml_xgboost.joblib"  # FIXME
+MODEL_PATH = BASE_DIR / "model" / "modelo_aml_dummy.joblib"  # FIXME
 
 # Variable global del modelo
 model = None
