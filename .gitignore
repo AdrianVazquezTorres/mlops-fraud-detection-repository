@@ -12,6 +12,12 @@ model/
 *.model
 *.joblib
 
+# Otras extensiones
+*.txt
+
+# Archivos específicos
+prompt_semilla.md
+
 # Entornos y Python
 .venv/
 __pycache__/
