@@ -3,9 +3,14 @@ data/
 *.csv
 *.parquet
 
+# Modelos carpeta
+model/
+*.joblib
+
 # Modelos locales
 *.pkl
 *.model
+*.joblib
 
 # Entornos y Python
 .venv/
