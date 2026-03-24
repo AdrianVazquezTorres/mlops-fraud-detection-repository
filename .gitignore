@@ -3,9 +3,9 @@ data/
 *.csv
 *.parquet
 
-# Modelos carpeta
+# Modelos carpetas
 model/
-*.joblib
+src/models
 
 # Modelos locales
 *.pkl
