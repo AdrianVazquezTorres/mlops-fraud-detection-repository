@@ -5,29 +5,31 @@ description = "Pipeline MLOps para detección de fraude financiero"
 authors = ["Tu Nombre <tu@email.com>"]
 readme = "README.md"
 
+# 🟢 GRUPO PRINCIPAL (PRODUCCIÓN - FASE 1)
+# Aquí solo va lo necesario para correr la API y hacer inferencia
 [tool.poetry.dependencies]
 python = "^3.11"
-# Core ML & Data
 numpy = "^1.26.0"
 pandas = "^2.1.0"
 scikit-learn = "^1.3.0"
 xgboost = "^2.0.0"
-# Producción & API (Fase 1)
 fastapi = "^0.103.0"
 uvicorn = "^0.23.0"
 pydantic = "^2.3.0"
-# MLOps & Cloud (Fases 2 y 3)
+
+# 🔵 GRUPO FASE 2 Y 3 (MLOPS & CLOUD)
+# Agrupamos lo pesado que no va en el contenedor de la API
+[tool.poetry.group.cloud_mlops.dependencies]
 mlflow = "^2.7.0"
 boto3 = "^1.28.0"
 kafka-python = "^2.0.2"
 pyspark = "^3.5.0"
 
+# 🟡 GRUPO DEV (DESARROLLO)
 [tool.poetry.group.dev.dependencies]
-# Entorno de trabajo y experimentación
 jupyterlab = "^1.0.0"
 matplotlib = "^3.8.0"
 seaborn = "^0.13.0"
-# Testing y Linting de DAGs
 pytest = "^7.4.0"
 apache-airflow = "^2.7.0"
 
