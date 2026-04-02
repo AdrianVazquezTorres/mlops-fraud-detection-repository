@@ -1,0 +1,22 @@
+# 1. Usamos una imagen oficial de Pythob ligera como base
+FROM python:3.11-slim
+
+# 2. Establecer el directorio de trabajo dentro del contenedor
+WORKDIR /app
+
+# 3. Copiar SÓLO el archivo requeriments.txt primero (para aprovechar el caché)
+COPY requirements_mlops.txt .
+
+# 4. Instalar las dependencias sin guardar el caché de pip para reducir el tamaño
+RUN pip install --no-cache-dir -r requirements_mlops.txt
+
+# 5. Copiar el código fuente y el modelo
+# Copiamos src/ y model/ manteniendo la estructura que espera tu main.py
+COPY src/ ./src/
+COPY model/ ./model/
+
+# 6. Exponer el puerto en el que correrá FastAPI
+EXPOSE 8000
+
+# 7. Comando para ejecutar la aplicación usando uvicorn
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
