@@ -26,3 +26,8 @@ __pycache__/
 # MLflow
 mlruns/
 mlflow.db
+
+# Apache Airflow
+plugins/
+logs/
+dags/

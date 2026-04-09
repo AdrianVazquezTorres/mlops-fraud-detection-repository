@@ -1,0 +1,8 @@
+# Usamos la imagen oficial de Airflow con Python 3.11
+FROM apache/airflow:2.7.2-python3.11
+
+# Copiamos nuestro archivo de dependencias ligero
+COPY requirements-airflow.txt /tmp/requirements-airflow.txt
+
+# Instalamos las dependencias
+RUN pip install --no-cache-dir -r /tmp/requirements-airflow.txt

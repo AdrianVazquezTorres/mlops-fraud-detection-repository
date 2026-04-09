@@ -14,6 +14,9 @@ venv/
 data/
 notebooks/
 tests/
+plugins/
+logs/
+dags/
 
 # Archivos de configuración local
 prompt_semilla.md
