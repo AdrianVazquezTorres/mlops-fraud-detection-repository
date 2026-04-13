@@ -9,6 +9,7 @@ x-airflow-common:
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
     - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    - PYTHONPATH=/opt/airflow
   volumes:
     # Carpetas nativas de Airflow
     - ./dags:/opt/airflow/dags
@@ -18,6 +19,7 @@ x-airflow-common:
     - ./data:/opt/airflow/data
     - ./mlruns:/opt/airflow/mlruns
     - ./mlflow.db:/opt/airflow/mlflow.db
+    - ./src:/opt/airflow/src  # Para que tengan acceso a train_dummy.py y transformers.py
   depends_on:
     postgres:
       condition: service_healthy
