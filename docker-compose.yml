@@ -72,5 +72,43 @@ services:
       - _AIRFLOW_WWW_USER_USERNAME=admin
       - _AIRFLOW_WWW_USER_PASSWORD=admin
 
+  # Apache kafka integration
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    networks:
+      - airflow-network # Usamos la misma red que Airflow para que se vean
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    networks:
+      - airflow-network
+    ports:
+      - "9092:9092" # Puerto para comunicación interna/Docker
+      - "9094:9094" # Puerto para comunicación externa (tu PC local)
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      # Configuración de red para que Kafka sepa quién le habla:
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/bitnami/kafka # Persistencia de datos
+
+# No olvides añadir el volumen al final de tu archivo
+volumes:
+  postgres-data:
+  kafka_data:
+    driver: local
+
 volumes: # <--- AÑADE ESTO AL FINAL DE TODO EL ARCHIVO
   postgres-data:
