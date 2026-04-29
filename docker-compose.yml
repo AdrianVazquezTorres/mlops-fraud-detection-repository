@@ -1,5 +1,3 @@
-version: '3.8'
-
 x-airflow-common:
   &airflow-common
   build:
@@ -20,6 +18,8 @@ x-airflow-common:
     - ./mlruns:/opt/airflow/mlruns
     - ./mlflow.db:/opt/airflow/mlflow.db
     - ./src:/opt/airflow/src  # Para que tengan acceso a train_dummy.py y transformers.py
+  networks:
+    - mlops-network  # Todos los servicios de Airflow usarán esta red
   depends_on:
     postgres:
       condition: service_healthy
@@ -35,6 +35,8 @@ services:
       - "5432:5432"
     volumes: # <--- AÑADE ESTAS DOS LÍNEAS AQUÍ
       - postgres-data:/var/lib/postgresql/data
+    networks:
+      - mlops-network  # Kafka fase
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -57,7 +59,6 @@ services:
     command: scheduler
 
   # Servicio para inicializar la base de datos de Airflow la primera vez
-  # Servicio para inicializar la base de datos de Airflow la primera vez
   airflow-init:
     <<: *airflow-common
     command: version
@@ -73,42 +74,61 @@ services:
       - _AIRFLOW_WWW_USER_PASSWORD=admin
 
   # Apache kafka integration
-  zookeeper:
-    image: bitnami/zookeeper:latest
-    container_name: zookeeper
-    networks:
-      - airflow-network # Usamos la misma red que Airflow para que se vean
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    ports:
-      - "2181:2181"
+  # zookeeper:
+  #   image: bitnamilegacy/zookeeper:latest
+  #   container_name: zookeeper
+  #   networks:
+  #     - mlops-network  # Nueva red creada en fase de kafka
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  #   ports:
+  #     - "2181:2181"
+  #   volumes:
+  #     - zookeeper_data:/bitnami/zookeeper
+  #   healthcheck: # 💡 Añadimos esto
+  #     test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
   kafka:
-    image: bitnami/kafka:latest
+    image: bitnamilegacy/kafka:latest
     container_name: kafka
     networks:
-      - airflow-network
+      - mlops-network
     ports:
       - "9092:9092" # Puerto para comunicación interna/Docker
       - "9094:9094" # Puerto para comunicación externa (tu PC local)
     environment:
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_ANONYMOUS_LOGIN=yes
-      # Configuración de red para que Kafka sepa quién le habla:
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9094
+      # Configuración de KRaft
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      # Cluster ID Estático: Esto evita el error de InconsistentClusterId para siempre
+      - KAFKA_KRAFT_CLUSTER_ID=abcdefghijklmnopqrstuv
+      # Red y Listeners
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-    depends_on:
-      - zookeeper
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    # depends_on:
+    #   zookeeper:
+    #     condition: service_healthy
     volumes:
       - kafka_data:/bitnami/kafka # Persistencia de datos
 
-# No olvides añadir el volumen al final de tu archivo
+# --- DECLARACIÓN GLOBAL DE REDES Y VOLÚMENES FASE KAFKA ---
+networks:
+  mlops-network:
+    driver: bridge # Esta es la parte que faltaba para corregir el error
+
 volumes:
   postgres-data:
   kafka_data:
     driver: local
-
-volumes: # <--- AÑADE ESTO AL FINAL DE TODO EL ARCHIVO
-  postgres-data:
+  # zookeeper_data:
+  #   driver: local
+    
