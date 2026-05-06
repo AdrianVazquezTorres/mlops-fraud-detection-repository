@@ -1,22 +1,29 @@
 import pandas as pd
 import json
 import time
+import os
 from confluent_kafka import Producer
 from pathlib import Path
 # Para revisar esquema
 from src.api.schemas import BankTransaction
 
+# --- CONFIGURACIÓN DE RUTAS ---
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Construcción de ruta absoluta de archivo parquet
+FILE_PATH = BASE_DIR / "data" / "daily_incoming_parquet" / "data_2026_04_15.parquet"
+
+
 # 1. Configuración del productor
 # 'bootstrap.servers': Dirección del contenedor kafka
 conf = {
-    'bootstrap.servers': 'localhost:9002',
+    'bootstrap.servers': 'localhost:9094',  # "Dirección" para acceder desde afuera (Windows)
     'client.id': 'fraud-detector-producer',
     "acks": "1",  # 1 es más rápido que 'all' para baja latencia
-    "lingers.ms": 0  # Envío inmediato, no espera a llenar lotes
+    "linger.ms": 0  # Envío inmediato, no espera a llenar lotes
 }
 
 # Inicializamos el objeto Producer
-producer = Producer(config=conf)
+producer = Producer(conf)
 
 # Función de confirmación (Callback)
 
@@ -33,17 +40,41 @@ def delivery_report(err, msg):
         # print(f"✅ Enviado: {msg.value().decode('utf-8')[:50]}...")
 
 
-# 2. Carga un archivo Parquet de ejemplo
-file_path = Path('./data/daily_incoming_parquet/transacciones_2026_04_15.parquet')
-
-
+# 2. Producer
 def run_producer():
-    if not file_path.exists():
-        print(f"❌ Error: La ruta/archivo no existen --> {file_path}")
+    if FILE_PATH.exists() is False:
+        print(f"❌ Error: La ruta/archivo no existen --> {FILE_PATH}")
         return
 
-    df = pd.read_parquet(file_path)
+    df = pd.read_parquet(FILE_PATH)
     # Tomamos una muestra para la prueba del esquema
     sample_data = df.head(50).to_dict(orient="records")
 
     print("🚀 Iniciando streaming con validación de esquema...")
+
+    try:
+        for row in sample_data:
+            try:
+                # Validamos que la fila cumpla con BankTransaction
+                valid_tx = BankTransaction(**row)
+                # Convertimos a JSON (usamos .dict() o .model_dump() según la versión de Pydantic)
+                payload = valid_tx.model_dump_json().encode('utf-8')
+
+                producer.produce(
+                    topic='transactions',
+                    value=payload,
+                    callback=delivery_report
+                )
+                producer.poll(0)
+                time.sleep(1)  # delay
+            except Exception as e:
+                print(f"⚠️ Fila inválida saltada. Error: {e}")
+                continue
+    except KeyboardInterrupt:
+        print("\n⛔ Streaming detenido ⛔")
+    finally:
+        producer.flush()
+
+
+if __name__ == "__main__":
+    run_producer()
