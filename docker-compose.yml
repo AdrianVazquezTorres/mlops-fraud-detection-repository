@@ -73,24 +73,6 @@ services:
       - _AIRFLOW_WWW_USER_USERNAME=admin
       - _AIRFLOW_WWW_USER_PASSWORD=admin
 
-  # Apache kafka integration
-  # zookeeper:
-  #   image: bitnamilegacy/zookeeper:latest
-  #   container_name: zookeeper
-  #   networks:
-  #     - mlops-network  # Nueva red creada en fase de kafka
-  #   environment:
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  #   ports:
-  #     - "2181:2181"
-  #   volumes:
-  #     - zookeeper_data:/bitnami/zookeeper
-  #   healthcheck: # 💡 Añadimos esto
-  #     test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-
   kafka:
     image: bitnamilegacy/kafka:latest
     container_name: kafka
@@ -114,9 +96,6 @@ services:
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
       - ALLOW_ANONYMOUS_LOGIN=yes
-    # depends_on:
-    #   zookeeper:
-    #     condition: service_healthy
     volumes:
       - kafka_data:/bitnami/kafka # Persistencia de datos
 
@@ -129,6 +108,4 @@ volumes:
   postgres-data:
   kafka_data:
     driver: local
-  # zookeeper_data:
-  #   driver: local
     

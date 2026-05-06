@@ -19,6 +19,7 @@ pydantic = "^2.3.0"
 
 # 🔵 GRUPO FASE 2 Y 3 (MLOPS & CLOUD)
 # Agrupamos lo pesado que no va en el contenedor de la API
+confluent-kafka = "^2.14.0"
 [tool.poetry.group.cloud_mlops.dependencies]
 mlflow = "^2.7.0"
 boto3 = "^1.28.0"
