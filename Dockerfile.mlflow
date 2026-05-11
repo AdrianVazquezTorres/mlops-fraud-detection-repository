@@ -1,0 +1,14 @@
+# Dockerfile.mlops
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalamos solo lo mínimo necesario
+COPY requirements_mlflow_clean.txt .
+RUN pip install --no-cache-dir -r requirements_mlflow_clean.txt
+
+# Exponemos el puerto de la UI
+EXPOSE 5000
+
+# No copiamos código aquí porque MLflow solo sirve para el tracking y registry
+# El comando lo definiremos en el docker-compose

@@ -1,0 +1,23 @@
+# Dockerfile.streaming
+FROM python:3.11-slim
+
+# Instalar Java y dependencias de sistema
+RUN apt-get update && apt-get install -y default-jre procps && apt-get clean
+
+WORKDIR /app
+
+# 1. Copiamos los archivos de dependencias (ya deben estar fuera del .dockerignore)
+COPY pyproject.toml poetry.lock ./
+
+# 2. Instalamos las dependencias usando --no-root
+# Esto evita que busque el README.md o la carpeta src/ en este paso
+RUN pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-root --with cloud_mlops,dev
+
+# 3. Ahora sí, copiamos el código fuente
+COPY src/ ./src/
+
+# Nota: data/ se inyecta vía VOLUMEN en el docker-compose, no aquí.
+
+CMD ["tail", "-f", "/dev/null"]
