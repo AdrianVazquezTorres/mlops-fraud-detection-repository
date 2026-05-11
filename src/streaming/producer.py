@@ -7,16 +7,12 @@ from pathlib import Path
 # Para revisar esquema
 from src.api.schemas import BankTransaction
 
-# --- CONFIGURACIÓN DE RUTAS ---
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# Construcción de ruta absoluta de archivo parquet
-FILE_PATH = BASE_DIR / "data" / "daily_incoming_parquet" / "data_2026_04_15.parquet"
-
+broker = os.getenv("KAFKA_BROKER", "kafka:9092")
 
 # 1. Configuración del productor
 # 'bootstrap.servers': Dirección del contenedor kafka
 conf = {
-    'bootstrap.servers': 'localhost:9094',  # "Dirección" para acceder desde afuera (Windows)
+    'bootstrap.servers': broker,  # "Dirección" para acceder desde afuera (Windows)
     'client.id': 'fraud-detector-producer',
     "acks": "1",  # 1 es más rápido que 'all' para baja latencia
     "linger.ms": 0  # Envío inmediato, no espera a llenar lotes
@@ -42,11 +38,14 @@ def delivery_report(err, msg):
 
 # 2. Producer
 def run_producer():
-    if FILE_PATH.exists() is False:
-        print(f"❌ Error: La ruta/archivo no existen --> {FILE_PATH}")
+    # Ruta dentro del contenedor (montada vía volumen en Docker-compose)
+    file_path = Path("data/daily_incoming_parquet/data_2026_04_15.parquet")
+
+    if not file_path.exists():
+        print(f"🚨 No se encontró el archivo en {file_path}")
         return
 
-    df = pd.read_parquet(FILE_PATH)
+    df = pd.read_parquet(file_path)
     # Tomamos una muestra para la prueba del esquema
     sample_data = df.head(50).to_dict(orient="records")
 
