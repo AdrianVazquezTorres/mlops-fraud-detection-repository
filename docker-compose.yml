@@ -99,6 +99,60 @@ services:
     volumes:
       - kafka_data:/bitnami/kafka # Persistencia de datos
 
+  mlflow-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow  # Dockerfile nuevo
+    container_name: mlflow-server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./mlflow.db:/app/mlflow.db
+    # Usamos el comando exacto que tú usas manualmente
+    command: >
+      mlflow server 
+      --backend-store-uri sqlite:///mlflow.db 
+      --artifacts-destination ./mlruns 
+      --serve-artifacts 
+      --host 0.0.0.0 
+      --port 5000
+    networks:
+      - mlops-network
+
+  fraud-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.streaming
+    container_name: fraud-producer
+    volumes:
+      - .:/app  # Sincronizamos código para que edites en Windows y se vea en Docker
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - mlops-network
+    command: python -m src.streaming.producer
+
+  fraud-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.streaming
+    container_name: fraud-consumer
+    volumes:
+      - .:/app
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+    depends_on:
+      - kafka
+      - mlflow-server
+    networks:
+      - mlops-network
+    command: python -m src.streaming.consumer
+
+
 # --- DECLARACIÓN GLOBAL DE REDES Y VOLÚMENES FASE KAFKA ---
 networks:
   mlops-network:

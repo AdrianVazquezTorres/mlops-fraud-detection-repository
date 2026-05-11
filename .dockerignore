@@ -22,8 +22,8 @@ dags/
 prompt_semilla.md
 estructura_proyecto.txt
 pyproject_toml_to_text.txt
-poetry.lock
-pyproject.toml
+# poetry.lock
+# pyproject.toml
 
 # MLflow
 mlruns/
