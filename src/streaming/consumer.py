@@ -5,6 +5,16 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
 
+# --- PASO CRUCIAL: Forzar la carga de paquetes de Kafka ---
+# Esto le dice a Spark qué descargar ANTES de que el motor de ejecución empiece.
+# Incluimos 'commons-pool2' que es una dependencia que a veces Spark olvida.
+os.environ['PYSPARK_SUBMIT_ARGS'] = (
+    '--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,'
+    'org.apache.kafka:kafka-clients:3.5.0,'
+    'org.apache.commons:commons-pool2:2.11.1 '
+    'pyspark-shell'
+)
+
 # 1. Definir el esquema (debe coincidir exactamente con BankTransaction)
 schema = StructType([
     StructField("step", IntegerType(), True),
@@ -22,9 +32,14 @@ def run_consumer():
     broker = os.getenv("KAFKA_BROKER", "kafka:9092")
 
     # 2. Inicializar Spark Session con el paquete de Kafka
+    # spark = SparkSession.builder
+    #    .appName("FraudDetectionConsumer")
+    #    .config("spark.jar.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0")
+    #    .getOrCreate()
+
+    # Ya no necesitamos .config("spark.jars.packages") porque usamos la variable de entorno
     spark = SparkSession.builder \
-        .appName("FraudDetectionConsumer") \
-        .config("spark.jar.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
+        .appName("FraudDetectionStreaming") \
         .getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
@@ -35,7 +50,7 @@ def run_consumer():
         .format("kafka") \
         .option("kafka.bootstrap.servers", broker) \
         .option("subscribe", "transactions") \
-        .load()  # .option("startingOffsets", "earliest") \
+        .load()  # .option("startingOffsets", "earliest")
 
     # 4. Trasnformación: Kafka entrega los datos en una columnas llamada "value" en formato binario
     # Debemos castear a String y luego aplicar el formato JSON
