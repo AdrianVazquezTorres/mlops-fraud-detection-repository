@@ -27,8 +27,9 @@ TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH}"
 
 # 2. Definimos el modelo que queremos pedirle al Model Registry
 MODEL_NAME = "ModeloFraude_Pipeline_Primero"
-MODEL_VERSION = "1"  # También puedes usar latest
-MODEL_URI = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
+# MODEL_VERSION = "1" También puedes usar latest
+MODEL_ALIAS = "produccion"
+MODEL_URI = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
 
 # Variable global del modelo
 model = None
