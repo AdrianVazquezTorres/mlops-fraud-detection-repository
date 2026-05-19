@@ -61,6 +61,8 @@ services:
   # Servicio para inicializar la base de datos de Airflow la primera vez
   airflow-init:
     <<: *airflow-common
+    profiles:
+      - init  # <--- Agrega estas dos líneas
     command: version
     environment:
       # REPETIMOS las variables base aquí para evitar que YAML las sobrescriba
@@ -145,6 +147,8 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
       - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+      - JDK_JAVA_OPTIONS=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED
+      - PYSPARK_SUBMIT_ARGS=--conf spark.driver.extraJavaOptions=-Dio.netty.tryReflectionSetAccessible=true --conf spark.executor.extraJavaOptions=-Dio.netty.tryReflectionSetAccessible=true pyspark-shell
     depends_on:
       - kafka
       - mlflow-server
