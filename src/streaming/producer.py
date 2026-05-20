@@ -76,27 +76,9 @@ def run_producer():
 
                 # Control de Tasa (Rate Limiting)
                 # 1 segundo / 50 = 0.02 segundos de espera entra cada transacción
-                logging.info(f"Transacción {transaction_dict['type']} enviada con {transaction_dict['amount']} cantidad")
                 time.sleep(0.02)
             logging.info('🔄 Fin del lote alcanzado. Reiniciando el archivo para mantener el streaming...')
 
-        # for row in sample_data:
-        #     try:
-        #         # Validamos que la fila cumpla con BankTransaction
-        #         valid_tx = BankTransaction(**row)
-        #         # Convertimos a JSON (usamos .dict() o .model_dump() según la versión de Pydantic)
-        #         payload = valid_tx.model_dump_json().encode('utf-8')
-
-        #         producer.produce(
-        #             topic='transactions',
-        #             value=payload,
-        #             callback=delivery_report
-        #         )
-        #         producer.poll(0)
-        #         time.sleep(1)  # delay
-        #     except Exception as e:
-        #         print(f"⚠️ Fila inválida saltada. Error: {e}")
-        #         continue
     except KeyboardInterrupt:
         logging.warning('🛑 Simulación detenida manualmente por el usuario (KeyboardInterrupt).')
     except Exception as e:

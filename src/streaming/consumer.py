@@ -1,10 +1,9 @@
 import os
 import mlflow
-import mlflow.pyfunc
 import pandas as pd
-from pathlib import Path
+import logging
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, pandas_udf
+from pyspark.sql.functions import from_json, col, pandas_udf, struct
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, FloatType
 
 # --- PASO CRUCIAL: Forzar la carga de paquetes de Kafka ---
@@ -19,117 +18,91 @@ os.environ['PYSPARK_SUBMIT_ARGS'] = (
 
 
 def run_consumer():
-    # 1. Configuración de Spark y MLflow
-    # Ya no necesitamos .config("spark.jars.packages") porque usamos la variable de entorno
+    # 1. Configuración Inicial
+    # Spark Session
     spark = SparkSession.builder \
         .appName("FraudDetectionStreaming") \
         .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
         .config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
         .getOrCreate()
 
-    spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.setLogLevel("WARN")  # Para no saturar la terminal con logs de INFO
+    logging.info("✅ Spark Session conectada exitosamente.")
 
-    # Obtenemos la URI de MLflow desde el Docker Compose
+    # TODO: Obtenemos la URI de MLflow desde el Docker Compose
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-server:5000"))
     MODEL_NAME = "ModeloFraude_Pipeline_Primero"
     MODEL_ALIAS = "produccion"
     MODEL_URI = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
+    topic_name = "fraud-transaction-stream"
 
-    print(f"🔄 Cargando modelo desde: {MODEL_URI}...")
-    # Cargamos el modelo puro de scikit-learn (Igual que en FastAPI)
-    model = mlflow.sklearn.load_model(MODEL_URI)
-    # Distribuimos el modeo a todos los nodos de Spark usando Broadcast
-    broadcast_model = spark.sparkContext.broadcast(model)
-
-    # 2. CREAMOS NUESTRO PROPIO UDF 🧠 (Bypass a la caja negra de MLflow)
-    @pandas_udf(DoubleType())
-    def predict_udf(step: pd.Series, type_col: pd.Series, amount: pd.Series,
-                    oldbalanceOrg: pd.Series, newbalanceOrig: pd.Series,
-                    oldbalanceDest: pd.Series, newbalanceDest: pd.Series) -> pd.Series:
-        # Construimos el dataframe exactamente como le gusta a el Pipeline
-        pandas_df = pd.DataFrame({
-            "step": step,
-            "type": type_col,
-            "amount": amount,
-            "oldbalanceOrg": oldbalanceOrg,
-            "newbalanceOrig": newbalanceOrig,
-            "oldbalanceDest": oldbalanceDest,
-            "newbalanceDest": newbalanceDest
-        })
-
-        # Usamos el modelo transmitido para predecir
-        try:
-            model_instance = broadcast_model.value
-            proba = model_instance.predict_proba(pandas_df)[:, 1]
-            return pd.Series(proba)
-        except Exception as e:
-            print(f"❌❌❌ ERROR: {e}")
-
-    # 3. Definir esquema (debe coincidir con el Productor y el Modelo (BankTransaction))
+    # 2. Definir esquema (debe coincidir con el Productor y el Modelo (BankTransaction))
     schema = StructType([
         StructField("step", IntegerType(), True),
         StructField("type", StringType(), True),
-        StructField("amount", FloatType(), True),
-        StructField("oldbalanceOrg", FloatType(), True),
-        StructField("newbalanceOrig", FloatType(), True),
-        StructField("oldbalanceDest", FloatType(), True),
-        StructField("newbalanceDest", FloatType(), True)
+        StructField("amount", DoubleType(), True),
+        StructField("oldbalanceOrg", DoubleType(), True),
+        StructField("newbalanceOrig", DoubleType(), True),
+        StructField("oldbalanceDest", DoubleType(), True),
+        StructField("newbalanceDest", DoubleType(), True)
     ])
+    # NOTE: preguntar por la eliminación de @pandas_udf, el topic_name, qué hace y devuelve predict_udf
 
-    # 4. Leer el stream de Kafka
+    # 3. Cargamos el modelo puro de scikit-learn (Igual que en FastAPI)
+    logging.info(f"🔄 Cargando el modelo de MLflow desde: {MODEL_URI}")
+    # spark_udf = permite que el modelo corra distribuido en todo el clúster de Spark
+    predict_udf = mlflow.pyfunc.spark_udf(spark=spark,
+                                          model_uri=MODEL_URI,
+                                          result_type=DoubleType())
+
+    # 4. Conectar al stream de Kafka y leer datos
     broker = os.getenv("KAFKA_BROKER", "kafka:9092")
 
     try:
         # Usamos el broker
+        logging.info(f"🎧 Escuchando mensajes del tópico: {topic_name}")
         df_raw = spark.readStream \
             .format("kafka") \
             .option("kafka.bootstrap.servers", broker) \
-            .option("subscribe", "transactions") \
+            .option("subscribe", topic_name) \
             .option("startingOffsets", "latest") \
             .load()
 
-        # 5. Trasnformación: Kafka entrega los datos en una columnas llamada "value" en formato binario
-        # Debemos castear a String y luego aplicar el formato JSON
-        df_transactions = df_raw.selectExpr("CAST(value AS STRING)") \
-            .select(from_json(col("value"), schema).alias("data")) \
+        # 5. Trasnformación: Kafka entrega los datos en una columna que nombramos "value" en formato binario
+        # Transformación: De Bytes a Columnas Estructuradas
+        df_transactions = df_raw.selectExpr("CAST(value AS STRING) as json_str") \
+            .select(from_json(col("json_str"), schema).alias("data")) \
             .select("data.*")
 
         # 6. INFERENCIA EN TIEMPO REAL 🧠
-        # Pasamos las columnas desglosadas a nuestra nueva función
-        # El modelo devolverá la probabilidad o clase según cómo lo guardaste
+        # Empaquetamos todas las columnas en un 'struct' para pasárselo al modelo
+        feature_cols = [c.name for c in schema]
         df_predictions = df_transactions.withColumn(
             "prediction_proba",
             predict_udf(
-                col("step"), col("type"), col("amount"), col("oldbalanceOrg"),
-                col("newbalanceOrig"), col("oldbalanceDest"), col("newbalanceDest")
+                struct(*[col(c) for c in feature_cols])
             )
-        )
+        )  # NOTE: Preguntar por el estruck y la nomenclatura de * y **
 
-        # Añadimos una columna lógica para alertar fraudes (umbral > 0.5)
+        # Creamos la bandera final de fraude
         df_final = df_predictions.withColumn(
             "is_fraud_alert_consumer",
             col("prediction_proba") > 0.5
         )
 
         # 7. Escribir resultados (Por ahora a consola para ver la magia)
+        logging.info("🚀 Iniciando Motor de Inferencia Continua...")
         query = df_final.writeStream \
             .outputMode("append") \
             .format("console") \
-            .option("truncate", "false") \
+            .trigger(processingTime="2 seconds") \
+            .option("checkpointLocation", "/app/data/checkpoints/fraud_streaming") \
             .start()
+        # NOTE: Preguntar por el trigger y option = checkpointLocation
 
-        print("🚀 Sistema de Inferencia en Streaming activo y escuchando...")
         query.awaitTermination()
     except Exception as e:
         print(f"❌❌❌ ERROR: {e}")
-
-    # 5. Sink (Destino): Por ahora, imprimimos en consola para validar
-    # print(f"👀 Consumidor conectado a {broker}. Esperando datos...")
-    # query = df_json.writeStream
-    #    .outputMode("append")
-    #    .format("console")
-    #    .start()
-    # query.awaitTermination()
 
 
 if __name__ == "__main__":
