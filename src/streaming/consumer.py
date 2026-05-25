@@ -105,14 +105,20 @@ def run_consumer():
         )
 
         # ======== Filtro temprano para FRAUDES ========
-        logging.info("🛡️ Aplicando filtro de seguridad en tiempo real...")
-        df_alerts_only = df_final.filter(col("is_fraud_alert") == True)
+        # logging.info("🛡️ Aplicando filtro de seguridad en tiempo real...")
+        # df_alerts_only = df_final.filter(col("is_fraud_alert") == True)
 
         # ======== Configurar el SINK directo a postgreSQL vía JDBC ========
         logging.info("🚀 Iniciando Motor de Inferencia Continua con soporte a PostgreSQL...")
 
-        def write_to_jdbc(dataframe, epoch_id):
-            dataframe.write \
+        def write_to_jdbc(df, epoch_id):
+            # 1. DEBUD VISUAL: Filtramos y mostramos los registros normales en consola
+            df_normal = df.filter(col("if_fraud_alert") == False)
+            logging.info(f"------ 🛡️ Legitimate Transactions (Lote {epoch_id}) ------")
+            df_normal.show(10, truncate=False)
+
+            df_fraud = df.filter(col("is_fraud_alert") == True)
+            df_fraud.write \
                 .format("jdbc") \
                 .option("url", jdbc_url) \
                 .option("dbtable", "fraud_alerts") \
@@ -122,7 +128,7 @@ def run_consumer():
                 .mode("append") \
                 .save()
 
-        query = df_alerts_only.writeStream \
+        query = df_final.writeStream \
             .foreachBatch(write_to_jdbc) \
             .option("checkpointLocation", "/app/data/checkpoints/fraud_postgres_sink") \
             .outputMode("append") \
