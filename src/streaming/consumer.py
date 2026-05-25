@@ -113,7 +113,7 @@ def run_consumer():
 
         def write_to_jdbc(df, epoch_id):
             # 1. DEBUD VISUAL: Filtramos y mostramos los registros normales en consola
-            df_normal = df.filter(col("if_fraud_alert") == False)
+            df_normal = df.filter(col("is_fraud_alert") == False)
             logging.info(f"------ 🛡️ Legitimate Transactions (Lote {epoch_id}) ------")
             df_normal.show(10, truncate=False)
 
@@ -131,7 +131,6 @@ def run_consumer():
         query = df_final.writeStream \
             .foreachBatch(write_to_jdbc) \
             .option("checkpointLocation", "/app/data/checkpoints/fraud_postgres_sink") \
-            .outputMode("append") \
             .start()
 
         # query = df_final.writeStream \
