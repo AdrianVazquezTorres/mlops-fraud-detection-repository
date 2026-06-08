@@ -17,6 +17,7 @@ src/models
 
 # Archivos específicos
 prompt_semilla.md
+.env
 
 # Entornos y Python
 .venv/
