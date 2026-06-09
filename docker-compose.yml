@@ -3,6 +3,8 @@ x-airflow-common:
   build:
     context: .
     dockerfile: Dockerfile.airflow
+  env_file:  # PARA los accesos de AWS
+    - .env
   environment:
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
@@ -127,6 +129,8 @@ services:
       context: .
       dockerfile: Dockerfile.streaming
     container_name: fraud-producer
+    env_file:  # Para los accesos de AWS
+      - .env
     volumes:
       - .:/app  # Sincronizamos código para que edites en Windows y se vea en Docker
     environment:
@@ -142,6 +146,8 @@ services:
       context: .
       dockerfile: Dockerfile.streaming
     container_name: fraud-consumer
+    env_file:  # Para los accesos de AWS
+      - .env
     volumes:
       - .:/app
     environment:
