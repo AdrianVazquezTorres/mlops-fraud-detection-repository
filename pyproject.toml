@@ -26,6 +26,7 @@ boto3 = "^1.28.0"
 kafka-python = "^2.0.2"
 pyspark = "^3.5.0"
 pyarrow = "^14.0.1"  # <--- NUEVA LÍNEA AÑADIDA
+s3fs = "2023.10.0"  # Para que pandas interactue con AWS
 
 # 🟡 GRUPO DEV (DESARROLLO)
 [tool.poetry.group.dev.dependencies]
