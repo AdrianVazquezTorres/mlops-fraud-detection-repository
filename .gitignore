@@ -31,4 +31,3 @@ mlflow.db
 # Apache Airflow
 plugins/
 logs/
-dags/
