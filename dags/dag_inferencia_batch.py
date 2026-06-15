@@ -31,6 +31,7 @@ BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
 default_args = {
     'owner': 'mlops_engineer',
     'retries': 1,
+    'depends_on_past': False,
 }
 
 # =============================================
@@ -62,8 +63,8 @@ def fraud_inference_dag():
         # logical_date = kwargs.get("ds")
 
         # En producción usaríamos ds.replace('-', '_'), pero para tus pruebas:
-        fecha_archivo = "2026_05_15"
-        s3_path = f"s3://{BUCKET_NAME}/bronce/data_{fecha_archivo}.parquet"
+        fecha_archivo = "2026_04_15"
+        s3_path = f"s3://{BUCKET_NAME}/bronce/{fecha_archivo}.parquet"
 
         # En el entorno real buscaríamos: f"transacciones_{logical_date}.parquet"
         # Para este proyecto, tomaremos el primer archivos disponible para simular:
@@ -95,7 +96,7 @@ def fraud_inference_dag():
 
         # Limpieza a nivel Data Engineering (NO feature engineering)
         df = df.drop_duplicates()
-        df = df.drop(columns="isFlaggedFraud", errors="ignore")
+        df = df.drop(columns=["isFlaggedFraud", "isFraud"], errors="ignore")
 
         # -------------------------------------------------------------
         # AQUÍ VA TU LÓGICA DE LIMPIEZA (Ej. eliminar columnas inútiles)
