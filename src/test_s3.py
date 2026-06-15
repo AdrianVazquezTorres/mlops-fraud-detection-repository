@@ -28,7 +28,7 @@ def probar_conexion_s3():
 
     # 4. Definiar cómo se llamará el archivo dentro de S3 (S3 KEY)
     # Podemos simular carpetas usando diagonales
-    s3_path = "incoming_parquet/2026_04_15.parquet"
+    s3_path = "bronce/2026_04_15.parquet"
 
     # 5. Ejecutar la inyección del archivo al bucket
     try:
