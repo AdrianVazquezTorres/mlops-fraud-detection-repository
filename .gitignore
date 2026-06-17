@@ -14,6 +14,7 @@ src/models
 
 # Otras extensiones
 *.txt
+!requirements*.txt
 
 # Archivos específicos
 prompt_semilla.md
