@@ -45,7 +45,7 @@ def delivery_report(err, msg):
 # 2. Producer
 def run_producer():
     # Ruta dentro del contenedor (montada vía volumen en Docker-compose)
-    file_path = Path("data/daily_incoming_parquet/data_2026_04_15.parquet")
+    file_path = Path("data/daily_incoming_parquet/2026_04_15.parquet")
 
     if not file_path.exists():
         print(f"🚨 No se encontró el archivo/ruta en {file_path}")
