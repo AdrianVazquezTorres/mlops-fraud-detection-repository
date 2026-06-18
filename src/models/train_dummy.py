@@ -6,6 +6,7 @@ from pathlib import Path
 from xgboost import XGBClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
+import os
 
 # Librerías para MLflow
 from sklearn.metrics import fbeta_score, average_precision_score, recall_score, confusion_matrix
@@ -55,7 +56,8 @@ def main():
     # Debe apuntar a una base de datos (local al inicio, a una de AWS ya en producción)
     # mlflow.set_tracking_uri("sqlite:///mlflow.db")  # Se creó en la raíz al ejecutar por primera vez el servidor de MLflow
     # mlflow.set_tracking_uri("http://localhost:5000")
-    mlflow.set_tracking_uri("http://host.docker.internal:5000")
+    MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://host.docker.internal:5000")
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment("Fraud_PaysimEC2_2026_06_18_V1")
 
     # Habilitamos el autologging para capturar parámetros del pipline automáticamente
