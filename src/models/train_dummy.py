@@ -102,7 +102,7 @@ def main():
         plt.figure(figsize=(6, 4))
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
         plt.title("Matriz de Confusión Dummy", size=14, weight="bold")
-        plt.savefig("confusion_matrix.png")
+        plt.savefig("Confusion_matrix.png")
         mlflow.log_artifact("Confusion_matrix.png")
         plt.close()
 
