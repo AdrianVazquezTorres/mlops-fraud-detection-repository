@@ -135,6 +135,7 @@ services:
       - .:/app  # Sincronizamos código para que edites en Windows y se vea en Docker
     environment:
       - KAFKA_BROKER=kafka:9092
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
     depends_on:
       - kafka
     networks:
