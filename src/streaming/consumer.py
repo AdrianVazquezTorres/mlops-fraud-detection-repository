@@ -51,7 +51,7 @@ def run_consumer():
     logging.info("✅ Spark Session con sporte JDBC conectada exitosamente.")
 
     # ======== Conectar MLflow ========
-    MODEL_NAME = "ModeloFraude_Pipeline_Primero"
+    MODEL_NAME = "Deteccion_Fraude_PaySim_DUMMY"
     MODEL_ALIAS = "produccion"
     MODEL_URI = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
     logging.info(f"🔄 Cargando el modelo de MLflow desde: {MODEL_URI}")
